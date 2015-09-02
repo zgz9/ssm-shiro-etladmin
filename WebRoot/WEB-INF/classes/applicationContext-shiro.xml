@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:mvc="http://www.springframework.org/schema/mvc"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:aop="http://www.springframework.org/schema/aop"
+	xmlns:tx="http://www.springframework.org/schema/tx"
+	xmlns:p="http://www.springframework.org/schema/p"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans 
+	http://www.springframework.org/schema/beans/spring-beans-3.0.xsd 
+	http://www.springframework.org/schema/mvc 
+	http://www.springframework.org/schema/mvc/spring-mvc-3.0.xsd 
+	http://www.springframework.org/schema/context 
+	http://www.springframework.org/schema/context/spring-context-3.0.xsd 
+	http://www.springframework.org/schema/aop 
+	http://www.springframework.org/schema/aop/spring-aop-3.0.xsd 
+	http://www.springframework.org/schema/tx 
+	http://www.springframework.org/schema/tx/spring-tx-3.0.xsd ">
+	
+	<!-- 配置shiro的过滤器工厂类，id shiroFilter要和我们在web.xml中配置的过滤器一致 -->
+	<bean id="shiroFilter" class="org.apache.shiro.spring.web.ShiroFilterFactoryBean">
+		<!-- 调用我们配置的权限管理器 -->
+		<property name="securityManager" ref="securityManager" />
+		<!-- 配置我们在登陆页登陆成功后的跳转地址，如果你访问的是非/member地址，则跳转到您访问的地址 -->
+		<property name="successUrl" value="/WEB-INF/pages/login.jsp" />
+		<!-- 配置我们的登录请求地址 -->
+		<property name="loginUrl" value="/login.jsp" />
+		<!-- 配置如果请求的资源不在您的权限范围，则跳转到/error.htm请求地址 -->
+		<property name="unauthorizedUrl" value="/error.htm" />
+		
+		<property name="filters">
+			<map>
+				<entry key="authc" value-ref="shiro"></entry>
+			</map>
+		</property>
+		<!-- 权限配置 -->
+		<property name="filterChainDefinitions">
+			<value>
+				<!-- anon表示此地址不需要任何权限即可访问 -->
+				/login.jsp=anon
+				/error.htm=anon
+				<!-- perms[user:query]表示访问此连接需要用户权限为user:query的用户 -->
+				<!-- roles[manager]表示访问此连接需要用户的角色为manager -->
+				/WEB-INF/pages/**=authc,roles["member"]
+				<!-- 所有的请求（除去配置的静态资源请求或请求地址为anon的请求）都要通过登录认证，如果未登录则跳转/login
+				/** = authc -->
+			</value>
+		</property>
+	</bean>
+	<bean id="shiro" class="cn.zg.shiro.ShiroFilter"/>
+	<bean id="shiroRealm" class="cn.zg.shiro.ShiroRealm" />
+
+	<!-- 配置权限管理器 -->
+	<bean id="securityManager" class="org.apache.shiro.web.mgt.DefaultWebSecurityManager">
+		<!-- ref对应我们写的realm shiroRealm -->
+		<property name="realm" ref="shiroRealm" />
+		<!-- 需要使用cache的话加上这句  --><property name="cacheManager" ref="shiroEhcacheManager" 
+			/>
+	</bean>
+
+	<!-- <bean id="shiroEhcacheManager" class="org.springframework.cache.ehcache.EhCacheCacheManager"
+		p:cacheManager-ref="ehcache" />
+	<bean id="ehcache"
+		class="org.springframework.cache.ehcache.EhCacheManagerFactoryBean"
+		p:configLocation="classpath:ehcache.xml" p:shared="true" />  -->
+	<!-- 用户授权信息Cache, 采用EhCache，需要的话就配置上此信息-->
+	<bean id="shiroEhcacheManager" class="org.apache.shiro.cache.ehcache.EhCacheManager"> 
+		<property name="cacheManagerConfigFile" value="classpath:ehcache.xml" /> 
+	</bean> 
+
+	<bean id="lifecycleBeanPostProcessor" class="org.apache.shiro.spring.LifecycleBeanPostProcessor" />
+	<bean
+		class="org.springframework.aop.framework.autoproxy.DefaultAdvisorAutoProxyCreator"
+		depends-on="lifecycleBeanPostProcessor">
+		<property name="proxyTargetClass" value="true" />
+	</bean>
+	<bean
+		class="org.apache.shiro.spring.security.interceptor.AuthorizationAttributeSourceAdvisor">
+		<property name="securityManager" ref="securityManager" />
+	</bean>
+	
+</beans>
